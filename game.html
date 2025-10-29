@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Geometry Dash - Game</title>
+<style>
+body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+canvas { background: #222; display: block; margin: 0 auto; }
+#scoreboard { position: fixed; top: 10px; right: 10px; color: white; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; }
+#debug { position: fixed; bottom: 10px; right: 10px; color: lime; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; display: none; }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas" width="800" height="400"></canvas>
+<div id="scoreboard">
+  Score: <span id="score">0</span><br>
+  High Score: <span id="highscore">0</span>
+</div>
+<div id="debug">
+  Debug Mode Active<br>
+  User: <span id="debugUser"></span>
+</div>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const currentUser = localStorage.getItem('currentUser');
+document.getElementById('debugUser').innerText = currentUser;
+
+// Game Variables
+let player = {x:50, y:300, width:30, height:30, dy:0, onGround:true};
+let gravity = 1;
+let obstacles = [];
+let score = 0;
+let highscore = parseInt(localStorage.getItem('highscore_' + currentUser) || '0');
+let level = 1;
+let debugMode = currentUser === 'RobTop';
+
+document.getElementById('highscore').innerText = highscore;
+if(debugMode) document.getElementById('debug').style.display = 'block';
+
+// Controls
+document.addEventListener('keydown', e => {
+    if(e.code === 'Space' && player.onGround){
+        player.dy = -15;
+        player.onGround = false;
+    }
+});
+
+// Obstacles generation
+function spawnObstacle() {
+    obstacles.push({x: canvas.width, y: 350, width: 30, height: 50});
+}
+
+// Game loop
+function update() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Player physics
+    player.dy += gravity;
+    player.y += player.dy;
+    if(player.y + player.height >= 380){
+        player.y = 380 - player.height;
+        player.dy = 0;
+        player.onGround = true;
+    }
+
+    // Draw player
+    ctx.fillStyle = 'cyan';
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+
+    // Obstacles
+    for(let i=0;i<obstacles.length;i++){
+        let ob = obstacles[i];
+        ob.x -= 5 + level;
+        ctx.fillStyle = 'red';
+        ctx.fillRect(ob.x, ob.y, ob.width, ob.height);
+
+        // Collision
+        if(player.x < ob.x + ob.width && player.x + player.width > ob.x &&
+           player.y < ob.y + ob.height && player.y + player.height > ob.y){
+            gameOver();
+        }
+    }
+
+    // Remove off-screen
+    obstacles = obstacles.filter(ob => ob.x + ob.width > 0);
+
+    // Score
+    score++;
+    document.getElementById('score').innerText = score;
+
+    // Increase level every 2000 points
+    if(score > level * 2000 && level < 7){
+        level++;
+    }
+
+    requestAnimationFrame(update);
+}
+
+// Spawn obstacles randomly
+setInterval(spawnObstacle, 2000 / level);
+
+// Game over
+function gameOver() {
+    if(score > highscore){
+        highscore = score;
+        localStorage.setItem('highscore_' + currentUser, highscore);
+    }
+    alert('Game Over! Score: ' + score);
+    score = 0;
+    obstacles = [];
+    level = 1;
+}
+
+// Start game
+update();
+</script>
+</body>
+</html>
