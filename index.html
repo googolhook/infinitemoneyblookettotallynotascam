@@ -1,194 +1,158 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Snake Game</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake Game with Debug Panel</title>
 <style>
 body {
   background: #111;
+  color: #0f0;
+  font-family: monospace;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  margin: 0;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  color: #0f0;
   flex-direction: column;
+  margin: 0;
+  height: 100vh;
 }
-canvas {
-  background: #222;
-  border: 2px solid #0f0;
-  display: none;
-}
-#score, #playerInfo {
-  font-size: 1.3em;
-  margin-bottom: 10px;
-  display: none;
-}
-#loginScreen, #signupScreen, #startScreen, #scoreboard {
-  text-align: center;
-  color: #0f0;
-}
-h1 { font-size: 3em; margin-bottom: 20px; text-shadow: 0 0 10px #0f0; }
-button {
-  padding: 10px 25px;
-  font-size: 1.1em;
-  border: 2px solid #0f0;
-  background: transparent;
-  color: #0f0;
-  cursor: pointer;
-  transition: all 0.3s;
+h1, h3 { margin: 10px; text-align: center; }
+canvas { background: #222; border: 2px solid #0f0; display: none; }
+button, input, select {
   margin: 5px;
-}
-button:hover { background: #0f0; color: #111; }
-input, select {
-  background: #111;
-  border: 2px solid #0f0;
-  color: #0f0;
-  font-size: 1.1em;
   padding: 5px 10px;
-  border-radius: 5px;
-  margin-top: 10px;
+  border: 2px solid #0f0;
+  background: #111;
+  color: #0f0;
   cursor: pointer;
 }
-input:focus, select:focus {
+button:hover, input:focus, select:focus {
+  background: #0f0;
+  color: #111;
   outline: none;
-  box-shadow: 0 0 10px #0f0;
 }
-table {
-  margin: 10px auto;
-  border-collapse: collapse;
-  color: #0f0;
-  width: 80%;
-}
-th, td {
-  border: 1px solid #0f0;
-  padding: 5px 10px;
-}
+#score { font-size: 1.5em; margin-top: 10px; display: none; }
+#debugPanel { display: none; border: 2px dashed #f0f; padding: 10px; margin-top: 10px; width: 300px; text-align: center; }
+#debugContent { display: none; margin-top: 10px; }
+#scoreboard { margin-top: 15px; }
+table { border-collapse: collapse; width: 300px; margin: auto; }
+th, td { border: 1px solid #0f0; padding: 5px; text-align: center; }
 th { background: #0a0; }
-/* Debug panel */
-#debugPanel { display: none; border: 2px dashed #f0f; padding: 10px; margin-top: 10px; color: #f0f; text-align: center; width: 300px; }
-#debugPanel h3 { color: #f0f; margin-top: 0; }
-#debugPanel button { border-color: #f0f; color: #f0f; }
-#debugPanel button:hover { background: #f0f; color: #111; }
-#pointsValue { font-weight: bold; color: #ff0; }
-#debugToggle { background: #222; border: 2px solid #f0f; color: #f0f; padding: 8px 20px; cursor: pointer; transition: all 0.3s; margin-top: 10px; font-size: 1em; }
-#debugToggle:hover { background: #f0f; color: #111; }
-#debugContent { display: none; margin-top: 10px; animation: fadeIn 0.3s ease; }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 </style>
 </head>
 <body>
 
 <!-- LOGIN SCREEN -->
 <div id="loginScreen">
-  <h1>🐍 Snake Game</h1>
+  <h1>Snake Game</h1>
   <h3>Login</h3>
-  <input id="loginUsername" type="text" placeholder="Username" /><br />
-  <input id="loginPassword" type="password" placeholder="Password" /><br />
-  <button id="loginBtn">Login</button><br />
-  <button id="toSignupBtn">Create Account</button><br />
+  <input id="loginUsername" placeholder="Username"><br>
+  <input id="loginPassword" type="password" placeholder="Password"><br>
+  <button id="loginBtn">Login</button>
+  <button id="toSignupBtn">Sign Up</button>
   <button id="resetPasswordBtn">Reset Password</button>
 </div>
 
 <!-- SIGNUP SCREEN -->
 <div id="signupScreen" style="display:none;">
-  <h1>🐍 Snake Game</h1>
+  <h1>Snake Game</h1>
   <h3>Create Account</h3>
-  <input id="signupUsername" type="text" placeholder="Username" /><br />
-  <input id="signupPassword" type="password" placeholder="Password" /><br />
-  <input id="signupEmail" type="email" placeholder="Email (for password reset)" /><br />
-  <button id="signupBtn">Sign Up</button><br />
-  <button id="backToLoginBtn">Back to Login</button>
+  <input id="signupUsername" placeholder="Username"><br>
+  <input id="signupPassword" type="password" placeholder="Password"><br>
+  <input id="signupEmail" type="email" placeholder="Email"><br>
+  <button id="signupBtn">Sign Up</button>
+  <button id="backToLoginBtn">Back</button>
 </div>
 
 <!-- START SCREEN -->
 <div id="startScreen" style="display:none;">
-  <h1>🐍 Snake Game</h1>
+  <h1>Snake Game</h1>
   <div id="playerInfo"></div>
-  <label for="difficulty">Select Difficulty:</label><br />
+  <label>Difficulty:</label>
   <select id="difficulty">
-    <option value="200">Easy 🐢</option>
-    <option value="120" selected>Medium 🐍</option>
-    <option value="70">Hard ⚡</option>
-  </select><br />
+    <option value="200">Easy</option>
+    <option value="120" selected>Medium</option>
+    <option value="70">Hard</option>
+  </select><br>
   <button id="startBtn">Start Game</button>
   <button id="logoutBtn">Logout</button>
 
-  <!-- Debug Panel -->
+  <!-- DEBUG PANEL -->
   <div id="debugPanel">
-    <button id="debugToggle">🧩 Debug Panel ▼</button>
+    <button id="debugToggle">Debug Panel ▼</button>
     <div id="debugContent">
-      <h3>Admin Controls</h3>
-      <label for="userSelect">Select User:</label><br />
-      <select id="userSelect"></select><br />
-      <label for="pointsRange">Points: <span id="pointsValue">10</span></label><br />
-      <input id="pointsRange" type="range" min="1" max="100" value="10"><br />
-      <button id="givePointsBtn">➕ Give Points</button>
-      <button id="removePointsBtn">➖ Remove Points</button>
-      <button id="changePasswordBtn">🔑 Change User Password</button>
-      <button id="changeUsernameBtn">✏️ Change Username</button>
+      <label>User:</label><br>
+      <select id="userSelect"></select><br>
+      <label>Points: <span id="pointsValue">10</span></label><br>
+      <input id="pointsRange" type="range" min="1" max="100" value="10"><br>
+      <button id="givePointsBtn">Add Points</button>
+      <button id="removePointsBtn">Remove Points</button><br>
+      <button id="changePasswordBtn">Change Password</button>
+      <button id="changeUsernameBtn">Change Username</button>
     </div>
   </div>
 
   <div id="scoreboard">
-    <h3>🏆 Scoreboard</h3>
-    <table id="scoreTable">
-      <tr><th>Player</th><th>High Score</th></tr>
-    </table>
+    <h3>Scoreboard</h3>
+    <table id="scoreTable"><tr><th>Player</th><th>High Score</th></tr></table>
   </div>
 </div>
 
-<div id="score">Score: 0</div>
 <canvas id="game" width="400" height="400"></canvas>
+<div id="score">Score: 0</div>
 
 <script>
+/* ==== GLOBAL VARIABLES ==== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const box = 20;
-const scoreDisplay = document.getElementById("score");
-const startScreen = document.getElementById("startScreen");
-const startBtn = document.getElementById("startBtn");
-const difficultySelect = document.getElementById("difficulty");
+let snake, food, d, gameInterval, score, speed;
+let currentUser = localStorage.getItem("snakeCurrentUser") || null;
+
+/* ==== DOM ELEMENTS ==== */
 const loginScreen = document.getElementById("loginScreen");
 const signupScreen = document.getElementById("signupScreen");
+const startScreen = document.getElementById("startScreen");
 const loginBtn = document.getElementById("loginBtn");
 const signupBtn = document.getElementById("signupBtn");
 const toSignupBtn = document.getElementById("toSignupBtn");
 const backToLoginBtn = document.getElementById("backToLoginBtn");
 const resetPasswordBtn = document.getElementById("resetPasswordBtn");
-const playerInfo = document.getElementById("playerInfo");
 const logoutBtn = document.getElementById("logoutBtn");
+const startBtn = document.getElementById("startBtn");
+const difficultySelect = document.getElementById("difficulty");
+const scoreDisplay = document.getElementById("score");
+const playerInfo = document.getElementById("playerInfo");
 const scoreTable = document.getElementById("scoreTable");
+
+/* ==== DEBUG ELEMENTS ==== */
 const debugPanel = document.getElementById("debugPanel");
+const debugToggle = document.getElementById("debugToggle");
+const debugContent = document.getElementById("debugContent");
 const userSelect = document.getElementById("userSelect");
 const pointsRange = document.getElementById("pointsRange");
 const pointsValue = document.getElementById("pointsValue");
 const givePointsBtn = document.getElementById("givePointsBtn");
 const removePointsBtn = document.getElementById("removePointsBtn");
-const debugToggle = document.getElementById("debugToggle");
-const debugContent = document.getElementById("debugContent");
 const changePasswordBtn = document.getElementById("changePasswordBtn");
 const changeUsernameBtn = document.getElementById("changeUsernameBtn");
 
-let score = 0, snake, food, d, game, speed;
-let currentUser = localStorage.getItem("snakeCurrentUser") || null;
-
-// ======== USERS ========
+/* ==== USER MANAGEMENT ==== */
 function loadUsers(){ return JSON.parse(localStorage.getItem("snakeUsers"))||{}; }
 function saveUsers(users){ localStorage.setItem("snakeUsers", JSON.stringify(users)); }
+
 function updateScoreboard(){
   const users = loadUsers();
   const sorted = Object.entries(users).sort((a,b)=>b[1].highScore - a[1].highScore);
-  scoreTable.innerHTML="<tr><th>Player</th><th>High Score</th></tr>";
+  scoreTable.innerHTML = "<tr><th>Player</th><th>High Score</th></tr>";
   sorted.forEach(([name,data])=>{
-    const row = document.createElement("tr");
-    row.innerHTML=`<td>${name}</td><td>${data.highScore}</td>`;
-    if(name===currentUser) row.style.background="#0a0";
-    scoreTable.appendChild(row);
+    const tr = document.createElement("tr");
+    tr.innerHTML=`<td>${name}</td><td>${data.highScore}</td>`;
+    if(name===currentUser) tr.style.background="#0a0";
+    scoreTable.appendChild(tr);
   });
 }
+
 function updateUserDropdown(){
   const users = loadUsers();
   userSelect.innerHTML="";
@@ -196,170 +160,172 @@ function updateUserDropdown(){
     const opt=document.createElement("option");
     opt.value=user; opt.textContent=user; userSelect.appendChild(opt);
   }
-  // Set dropdown to follow current user
   if(currentUser) userSelect.value = currentUser;
 }
 
-// ======== NAVIGATION ========
+/* ==== SCREEN NAVIGATION ==== */
 toSignupBtn.onclick=()=>{ loginScreen.style.display="none"; signupScreen.style.display="block"; };
 backToLoginBtn.onclick=()=>{ signupScreen.style.display="none"; loginScreen.style.display="block"; };
 
-// ======== LOGIN ========
+/* ==== LOGIN ==== */
 loginBtn.onclick=()=>{
-  const username=document.getElementById("loginUsername").value.trim();
-  const password=document.getElementById("loginPassword").value.trim();
-  if(!username||!password) return alert("Enter username and password!");
+  const u = document.getElementById("loginUsername").value.trim();
+  const p = document.getElementById("loginPassword").value.trim();
   const users = loadUsers();
-  if(!users[username]) return alert("User does not exist! Please sign up first.");
-  if(users[username].password!==password) return alert("Incorrect password!");
-  currentUser=username;
-  localStorage.setItem("snakeCurrentUser", currentUser);
+  if(!u || !p) return alert("Enter username and password!");
+  if(!users[u]) return alert("User does not exist!");
+  if(users[u].password!==p) return alert("Incorrect password!");
+  currentUser = u;
+  localStorage.setItem("snakeCurrentUser",currentUser);
   showStartScreen();
 };
 
-// ======== PASSWORD RESET ========
-resetPasswordBtn.onclick=()=>{
-  const username=document.getElementById("loginUsername").value.trim();
-  const users = loadUsers();
-  if(!users[username]) return alert("User not found!");
-  const email = prompt("Enter your email to reset password:");
-  if(email!==users[username].email) return alert("Email does not match our records!");
-  const newPass = prompt("Enter your new password:");
-  if(newPass){ users[username].password=newPass; saveUsers(users); alert("✅ Password reset!"); }
-};
-
-// ======== SIGNUP ========
+/* ==== SIGNUP ==== */
 signupBtn.onclick=()=>{
-  const username=document.getElementById("signupUsername").value.trim();
-  const password=document.getElementById("signupPassword").value.trim();
-  const email=document.getElementById("signupEmail").value.trim();
-  if(!username||!password||!email) return alert("Enter username, password, and email!");
-  const users=loadUsers();
-  if(users[username]) return alert("Username already exists!");
-  users[username]={password,email,highScore:0};
+  const u = document.getElementById("signupUsername").value.trim();
+  const p = document.getElementById("signupPassword").value.trim();
+  const e = document.getElementById("signupEmail").value.trim();
+  if(!u||!p||!e) return alert("Fill all fields!");
+  const users = loadUsers();
+  if(users[u]) return alert("Username exists!");
+  users[u] = {password:p,email:e,highScore:0};
   saveUsers(users);
-  alert("✅ Account created! You can now log in.");
-  signupScreen.style.display="none";
-  loginScreen.style.display="block";
+  alert("Account created!");
+  signupScreen.style.display="none"; loginScreen.style.display="block";
 };
 
-// ======== LOGOUT ========
-logoutBtn.onclick=()=>{
-  currentUser=null;
-  localStorage.removeItem("snakeCurrentUser");
-  startScreen.style.display="none";
-  loginScreen.style.display="block";
+/* ==== PASSWORD RESET ==== */
+resetPasswordBtn.onclick=()=>{
+  const u = document.getElementById("loginUsername").value.trim();
+  const users = loadUsers();
+  if(!users[u]) return alert("User not found!");
+  const email = prompt("Enter your email:");
+  if(email!==users[u].email) return alert("Email mismatch!");
+  const newPass = prompt("Enter new password:");
+  if(newPass){ users[u].password=newPass; saveUsers(users); alert("Password reset!"); }
 };
 
-// ======== START GAME ========
+/* ==== LOGOUT ==== */
+logoutBtn.onclick=()=>{ currentUser=null; localStorage.removeItem("snakeCurrentUser"); startScreen.style.display="none"; loginScreen.style.display="block"; };
+
+/* ==== START GAME ==== */
 startBtn.onclick=startGame;
 function startGame(){
-  if(!currentUser) return alert("Please login first!");
-  speed=parseInt(difficultySelect.value);
+  speed = parseInt(difficultySelect.value);
   startScreen.style.display="none";
   canvas.style.display="block";
   scoreDisplay.style.display="block";
-  score=0;
+  score = 0;
   scoreDisplay.textContent="Score: 0";
   snake=[{x:200,y:200}];
-  food={x:Math.floor(Math.random()*19+1)*box,y:Math.floor(Math.random()*19+1)*box};
+  spawnFood();
   d=null;
-  game=setInterval(draw,speed);
+  document.addEventListener("keydown",control);
+  gameInterval=setInterval(draw,speed);
 }
 
-// ======== GAME LOGIC ========
-document.addEventListener("keydown", e=>{
+/* ==== CONTROLS ==== */
+function control(e){
   if(e.key==="ArrowLeft" && d!=="RIGHT") d="LEFT";
   if(e.key==="ArrowUp" && d!=="DOWN") d="UP";
   if(e.key==="ArrowRight" && d!=="LEFT") d="RIGHT";
   if(e.key==="ArrowDown" && d!=="UP") d="DOWN";
-});
+}
 
-function collision(head,array){ return array.some(part=>part.x===head.x && part.y===head.y); }
+/* ==== SPAWN FOOD ==== */
+function spawnFood(){
+  food={x:Math.floor(Math.random()*20)*box, y:Math.floor(Math.random()*20)*box};
+}
 
+/* ==== COLLISION CHECK ==== */
+function collision(head,array){ return array.some(s=>s.x===head.x && s.y===head.y); }
+
+/* ==== DRAW GAME ==== */
 function draw(){
   ctx.fillStyle="#111"; ctx.fillRect(0,0,400,400);
-  snake.forEach((part,i)=>{ ctx.fillStyle=i===0?"#0f0":"#0a0"; ctx.fillRect(part.x,part.y,box,box); });
+  snake.forEach((s,i)=>{ ctx.fillStyle=i===0?"#0f0":"#0a0"; ctx.fillRect(s.x,s.y,box,box); });
   ctx.fillStyle="#f00"; ctx.fillRect(food.x,food.y,box,box);
-  let head={x:snake[0].x,y:snake[0].y};
+
+  let head={x:snake[0].x, y:snake[0].y};
   if(d==="LEFT") head.x-=box;
   if(d==="UP") head.y-=box;
   if(d==="RIGHT") head.x+=box;
   if(d==="DOWN") head.y+=box;
-  if(head.x<0||head.y<0||head.x>=400||head.y>=400||collision(head,snake)){
-    clearInterval(game);
+
+  if(head.x<0 || head.y<0 || head.x>=400 || head.y>=400 || collision(head,snake)){
+    clearInterval(gameInterval);
     alert("Game Over!");
     updateHighScore();
     canvas.style.display="none";
     startScreen.style.display="block";
-    updateScoreboard();
     return;
   }
+
   snake.unshift(head);
   if(head.x===food.x && head.y===food.y){
-    score+=10;
-    food={x:Math.floor(Math.random()*19+1)*box,y:Math.floor(Math.random()*19+1)*box};
-  }else{ snake.pop(); }
+    score+=10; spawnFood();
+  } else { snake.pop(); }
+
   scoreDisplay.textContent="Score: "+score;
 }
 
+/* ==== HIGH SCORE UPDATE ==== */
 function updateHighScore(){
   const users=loadUsers();
-  if(score>users[currentUser].highScore){ users[currentUser].highScore=score; saveUsers(users); }
+  if(score>users[currentUser].highScore){
+    users[currentUser].highScore=score;
+    saveUsers(users);
+  }
   updateScoreboard();
 }
 
-// ======== DEBUG PANEL ========
+/* ==== DEBUG PANEL ==== */
 debugToggle.onclick=()=>{ debugContent.style.display=debugContent.style.display==="block"?"none":"block"; };
 pointsRange.oninput=()=>{ pointsValue.textContent=pointsRange.value; };
 givePointsBtn.onclick=()=>{
   const users=loadUsers();
-  const user=userSelect.value;
-  users[user].highScore+=parseInt(pointsRange.value);
-  saveUsers(users);
-  updateScoreboard();
+  const u=userSelect.value;
+  users[u].highScore+=parseInt(pointsRange.value);
+  saveUsers(users); updateScoreboard();
 };
 removePointsBtn.onclick=()=>{
   const users=loadUsers();
-  const user=userSelect.value;
-  users[user].highScore-=parseInt(pointsRange.value);
-  if(users[user].highScore<0) users[user].highScore=0;
-  saveUsers(users);
-  updateScoreboard();
+  const u=userSelect.value;
+  users[u].highScore=Math.max(0, users[u].highScore-parseInt(pointsRange.value));
+  saveUsers(users); updateScoreboard();
 };
 changePasswordBtn.onclick=()=>{
   const users=loadUsers();
-  const user=userSelect.value;
-  const newPass=prompt(`Enter new password for ${user}:`);
-  if(newPass){ users[user].password=newPass; saveUsers(users); alert("✅ Password changed!"); }
+  const u=userSelect.value;
+  const newPass=prompt(`New password for ${u}:`);
+  if(newPass){ users[u].password=newPass; saveUsers(users); alert("Password changed!"); }
 };
 changeUsernameBtn.onclick=()=>{
-  const oldUser=userSelect.value;
-  const newUser=prompt(`Enter new username for ${oldUser}:`);
-  if(!newUser||newUser.trim()==="") return alert("Invalid username!");
   const users=loadUsers();
-  if(users[newUser]) return alert("Username already exists!");
-  users[newUser]=users[oldUser];
-  delete users[oldUser];
-  saveUsers(users);
-  if(currentUser===oldUser){ currentUser=newUser; localStorage.setItem("snakeCurrentUser",currentUser); }
-  alert(`✅ Username changed from ${oldUser} to ${newUser}`);
+  const oldU=userSelect.value;
+  const newU=prompt(`New username for ${oldU}:`);
+  if(!newU || users[newU]) return alert("Invalid or existing username!");
+  users[newU]=users[oldU]; delete users[oldU]; saveUsers(users);
+  if(currentUser===oldU){ currentUser=newU; localStorage.setItem("snakeCurrentUser",newU); }
   updateUserDropdown();
-  playerInfo.textContent=`👤 Logged in as: ${currentUser} | High Score: ${users[currentUser].highScore}`;
+  playerInfo.textContent=`Logged in as: ${currentUser} | High Score: ${users[currentUser].highScore}`;
+  alert("Username changed!");
 };
 
-// ======== INITIAL SETUP ========
+/* ==== INITIAL SCREEN ==== */
 function showStartScreen(){
   loginScreen.style.display="none";
   signupScreen.style.display="none";
   startScreen.style.display="block";
   canvas.style.display="none";
   scoreDisplay.style.display="none";
-  playerInfo.textContent=`👤 Logged in as: ${currentUser} | High Score: ${loadUsers()[currentUser].highScore}`;
+  playerInfo.textContent=`Logged in as: ${currentUser} | High Score: ${loadUsers()[currentUser].highScore}`;
   updateScoreboard();
   updateUserDropdown();
 }
+
 if(currentUser) showStartScreen();
 </script>
+
 </body>
 </html>
