@@ -128,6 +128,7 @@ th { background: #0a0; }
       <button id="givePointsBtn">➕ Give Points</button>
       <button id="removePointsBtn">➖ Remove Points</button>
       <button id="changePasswordBtn">🔑 Change User Password</button>
+      <button id="changeUsernameBtn">✏️ Change Username</button>
     </div>
   </div>
 
@@ -169,6 +170,7 @@ const removePointsBtn = document.getElementById("removePointsBtn");
 const debugToggle = document.getElementById("debugToggle");
 const debugContent = document.getElementById("debugContent");
 const changePasswordBtn = document.getElementById("changePasswordBtn");
+const changeUsernameBtn = document.getElementById("changeUsernameBtn");
 
 let score = 0, snake, food, d, game, speed;
 let currentUser = localStorage.getItem("snakeCurrentUser") || null;
@@ -194,6 +196,8 @@ function updateUserDropdown(){
     const opt=document.createElement("option");
     opt.value=user; opt.textContent=user; userSelect.appendChild(opt);
   }
+  // Set dropdown to follow current user
+  if(currentUser) userSelect.value = currentUser;
 }
 
 // ======== NAVIGATION ========
@@ -277,65 +281,48 @@ function draw(){
   ctx.fillStyle="#111"; ctx.fillRect(0,0,400,400);
   snake.forEach((part,i)=>{ ctx.fillStyle=i===0?"#0f0":"#0a0"; ctx.fillRect(part.x,part.y,box,box); });
   ctx.fillStyle="#f00"; ctx.fillRect(food.x,food.y,box,box);
-
-  let snakeX=snake[0].x, snakeY=snake[0].y;
-  if(d==="LEFT") snakeX-=box;
-  if(d==="UP") snakeY-=box;
-  if(d==="RIGHT") snakeX+=box;
-  if(d==="DOWN") snakeY+=box;
-
-  if(snakeX===food.x && snakeY===food.y){
-    score++;
-    scoreDisplay.textContent="Score: "+score;
-    food={x:Math.floor(Math.random()*19+1)*box,y:Math.floor(Math.random()*19+1)*box};
-  } else { snake.pop(); }
-
-  const newHead={x:snakeX,y:snakeY};
-  if(snakeX<0||snakeY<0||snakeX>=400||snakeY>=400||collision(newHead,snake)){
-    gameOver();
+  let head={x:snake[0].x,y:snake[0].y};
+  if(d==="LEFT") head.x-=box;
+  if(d==="UP") head.y-=box;
+  if(d==="RIGHT") head.x+=box;
+  if(d==="DOWN") head.y+=box;
+  if(head.x<0||head.y<0||head.x>=400||head.y>=400||collision(head,snake)){
+    clearInterval(game);
+    alert("Game Over!");
+    updateHighScore();
+    canvas.style.display="none";
+    startScreen.style.display="block";
+    updateScoreboard();
     return;
   }
-
-  snake.unshift(newHead);
-}
-
-// ======== GAME OVER ========
-function gameOver(){
-  clearInterval(game);
-  canvas.style.display="none";
-  scoreDisplay.style.display="none";
-  startScreen.style.display="block";
-  updateHighScore();
+  snake.unshift(head);
+  if(head.x===food.x && head.y===food.y){
+    score+=10;
+    food={x:Math.floor(Math.random()*19+1)*box,y:Math.floor(Math.random()*19+1)*box};
+  }else{ snake.pop(); }
+  scoreDisplay.textContent="Score: "+score;
 }
 
 function updateHighScore(){
   const users=loadUsers();
-  if(score>users[currentUser].highScore){
-    users[currentUser].highScore=score;
-    saveUsers(users);
-    alert(`🎉 New high score: ${score}`);
-  }
-  playerInfo.textContent=`👤 Logged in as: ${currentUser} | High Score: ${users[currentUser].highScore}`;
+  if(score>users[currentUser].highScore){ users[currentUser].highScore=score; saveUsers(users); }
   updateScoreboard();
-  updateUserDropdown();
 }
 
 // ======== DEBUG PANEL ========
-debugToggle.onclick=()=>{
-  debugContent.style.display = debugContent.style.display==="block" ? "none":"block";
-};
+debugToggle.onclick=()=>{ debugContent.style.display=debugContent.style.display==="block"?"none":"block"; };
 pointsRange.oninput=()=>{ pointsValue.textContent=pointsRange.value; };
 givePointsBtn.onclick=()=>{
   const users=loadUsers();
   const user=userSelect.value;
-  users[user].highScore += parseInt(pointsRange.value);
+  users[user].highScore+=parseInt(pointsRange.value);
   saveUsers(users);
   updateScoreboard();
 };
 removePointsBtn.onclick=()=>{
   const users=loadUsers();
   const user=userSelect.value;
-  users[user].highScore -= parseInt(pointsRange.value);
+  users[user].highScore-=parseInt(pointsRange.value);
   if(users[user].highScore<0) users[user].highScore=0;
   saveUsers(users);
   updateScoreboard();
@@ -346,19 +333,33 @@ changePasswordBtn.onclick=()=>{
   const newPass=prompt(`Enter new password for ${user}:`);
   if(newPass){ users[user].password=newPass; saveUsers(users); alert("✅ Password changed!"); }
 };
+changeUsernameBtn.onclick=()=>{
+  const oldUser=userSelect.value;
+  const newUser=prompt(`Enter new username for ${oldUser}:`);
+  if(!newUser||newUser.trim()==="") return alert("Invalid username!");
+  const users=loadUsers();
+  if(users[newUser]) return alert("Username already exists!");
+  users[newUser]=users[oldUser];
+  delete users[oldUser];
+  saveUsers(users);
+  if(currentUser===oldUser){ currentUser=newUser; localStorage.setItem("snakeCurrentUser",currentUser); }
+  alert(`✅ Username changed from ${oldUser} to ${newUser}`);
+  updateUserDropdown();
+  playerInfo.textContent=`👤 Logged in as: ${currentUser} | High Score: ${users[currentUser].highScore}`;
+};
 
-// ======== INIT ========
-if(currentUser){ showStartScreen(); }
+// ======== INITIAL SETUP ========
 function showStartScreen(){
   loginScreen.style.display="none";
   signupScreen.style.display="none";
   startScreen.style.display="block";
-  const users=loadUsers();
-  if(users[currentUser]) playerInfo.textContent=`👤 Logged in as: ${currentUser} | High Score: ${users[currentUser].highScore}`;
+  canvas.style.display="none";
+  scoreDisplay.style.display="none";
+  playerInfo.textContent=`👤 Logged in as: ${currentUser} | High Score: ${loadUsers()[currentUser].highScore}`;
   updateScoreboard();
   updateUserDropdown();
 }
+if(currentUser) showStartScreen();
 </script>
-
 </body>
 </html>
