@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login - Geometry Dash</title>
+<style>
+body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+input, button { margin: 5px; padding: 10px; }
+</style>
+</head>
+<body>
+<h2>Login</h2>
+<input type="text" id="username" placeholder="Username">
+<input type="password" id="password" placeholder="Password">
+<button onclick="login()">Login</button>
+<p id="msg"></p>
+<script>
+function login() {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const saved = localStorage.getItem('user_' + username);
+    if (saved && saved === password) {
+        localStorage.setItem('currentUser', username);
+        window.location.href = 'game.html';
+    } else {
+        document.getElementById('msg').innerText = 'Invalid credentials!';
+    }
+}
+</script>
+</body>
+</html>
