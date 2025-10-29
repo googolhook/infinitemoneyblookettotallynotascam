@@ -23,40 +23,40 @@
       display: none;
     }
 
-    #score {
-      font-size: 1.5em;
+    #score, #playerInfo {
+      font-size: 1.3em;
       margin-bottom: 10px;
       display: none;
     }
 
-    #startScreen {
+    #loginScreen, #startScreen, #scoreboard {
       text-align: center;
       color: #0f0;
     }
 
-    #startScreen h1 {
+    h1 {
       font-size: 3em;
       margin-bottom: 20px;
       text-shadow: 0 0 10px #0f0;
     }
 
-    #startBtn {
+    button {
       padding: 10px 25px;
-      font-size: 1.2em;
+      font-size: 1.1em;
       border: 2px solid #0f0;
       background: transparent;
       color: #0f0;
       cursor: pointer;
       transition: all 0.3s;
-      margin-top: 10px;
+      margin: 5px;
     }
 
-    #startBtn:hover {
+    button:hover {
       background: #0f0;
       color: #111;
     }
 
-    select {
+    input, select {
       background: #111;
       border: 2px solid #0f0;
       color: #0f0;
@@ -67,15 +67,67 @@
       cursor: pointer;
     }
 
-    select:focus {
+    input:focus, select:focus {
       outline: none;
       box-shadow: 0 0 10px #0f0;
+    }
+
+    table {
+      margin: 10px auto;
+      border-collapse: collapse;
+      color: #0f0;
+      width: 80%;
+    }
+
+    th, td {
+      border: 1px solid #0f0;
+      padding: 5px 10px;
+    }
+
+    th {
+      background: #0a0;
+    }
+
+    /* Debug panel styling */
+    #debugPanel {
+      display: none;
+      border: 2px dashed #f0f;
+      padding: 10px;
+      margin-top: 10px;
+      color: #f0f;
+    }
+
+    #debugPanel h3 {
+      color: #f0f;
+      margin-top: 0;
+    }
+
+    #debugPanel button {
+      border-color: #f0f;
+      color: #f0f;
+    }
+
+    #debugPanel button:hover {
+      background: #f0f;
+      color: #111;
     }
   </style>
 </head>
 <body>
-  <div id="startScreen">
+
+  <!-- LOGIN SCREEN -->
+  <div id="loginScreen">
     <h1>🐍 Snake Game</h1>
+    <h3>Login or Create an Account</h3>
+    <input id="username" type="text" placeholder="Username" /><br />
+    <input id="password" type="password" placeholder="Password" /><br />
+    <button id="loginBtn">Login / Signup</button>
+  </div>
+
+  <!-- START SCREEN -->
+  <div id="startScreen" style="display:none;">
+    <h1>🐍 Snake Game</h1>
+    <div id="playerInfo"></div>
     <label for="difficulty">Select Difficulty:</label><br />
     <select id="difficulty">
       <option value="200">Easy 🐢</option>
@@ -83,6 +135,21 @@
       <option value="70">Hard ⚡</option>
     </select><br />
     <button id="startBtn">Start Game</button>
+    <button id="logoutBtn">Logout</button>
+
+    <!-- Debug Panel -->
+    <div id="debugPanel">
+      <h3>🧩 Debug Panel</h3>
+      <button id="addScoreBtn">+10 Score</button>
+      <button id="removeScoreBtn">-10 Score</button>
+    </div>
+
+    <div id="scoreboard">
+      <h3>🏆 Scoreboard</h3>
+      <table id="scoreTable">
+        <tr><th>Player</th><th>High Score</th></tr>
+      </table>
+    </div>
   </div>
 
   <div id="score">Score: 0</div>
@@ -96,13 +163,73 @@
     const startScreen = document.getElementById("startScreen");
     const startBtn = document.getElementById("startBtn");
     const difficultySelect = document.getElementById("difficulty");
+    const loginScreen = document.getElementById("loginScreen");
+    const loginBtn = document.getElementById("loginBtn");
+    const playerInfo = document.getElementById("playerInfo");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const scoreTable = document.getElementById("scoreTable");
+    const debugPanel = document.getElementById("debugPanel");
+    const addScoreBtn = document.getElementById("addScoreBtn");
+    const removeScoreBtn = document.getElementById("removeScoreBtn");
 
     let score = 0;
     let snake, food, d, game, speed;
+    let currentUser = null;
+
+    // Load users from localStorage
+    function loadUsers() {
+      return JSON.parse(localStorage.getItem("snakeUsers")) || {};
+    }
+
+    function saveUsers(users) {
+      localStorage.setItem("snakeUsers", JSON.stringify(users));
+    }
+
+    function updateScoreboard() {
+      const users = loadUsers();
+      const sorted = Object.entries(users).sort((a,b)=>b[1].highScore - a[1].highScore);
+      scoreTable.innerHTML = "<tr><th>Player</th><th>High Score</th></tr>";
+      sorted.forEach(([name, data])=>{
+        scoreTable.innerHTML += `<tr><td>${name}</td><td>${data.highScore}</td></tr>`;
+      });
+    }
+
+    loginBtn.addEventListener("click", ()=>{
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+      if(!username || !password) return alert("Enter username and password!");
+
+      let users = loadUsers();
+      if(users[username]) {
+        if(users[username].password !== password) {
+          alert("Incorrect password!");
+          return;
+        }
+      } else {
+        users[username] = { password, highScore: 0 };
+        saveUsers(users);
+      }
+
+      currentUser = username;
+      loginScreen.style.display = "none";
+      startScreen.style.display = "block";
+      playerInfo.textContent = `👤 Logged in as: ${username} | High Score: ${users[username].highScore}`;
+      updateScoreboard();
+
+      // Show debug panel only if user is "debug"
+      debugPanel.style.display = (username === "debug") ? "block" : "none";
+    });
+
+    logoutBtn.addEventListener("click", ()=>{
+      currentUser = null;
+      startScreen.style.display = "none";
+      loginScreen.style.display = "block";
+    });
 
     startBtn.addEventListener("click", startGame);
 
     function startGame() {
+      if(!currentUser) return alert("Please login first!");
       speed = parseInt(difficultySelect.value);
       startScreen.style.display = "none";
       canvas.style.display = "block";
@@ -132,20 +259,17 @@
     }
 
     function collision(head, array) {
-      for (let i = 0; i < array.length; i++) {
-        if (head.x === array[i].x && head.y === array[i].y) return true;
-      }
-      return false;
+      return array.some(part => head.x === part.x && head.y === part.y);
     }
 
     function draw() {
       ctx.fillStyle = "#111";
       ctx.fillRect(0, 0, 400, 400);
 
-      for (let i = 0; i < snake.length; i++) {
+      snake.forEach((part, i) => {
         ctx.fillStyle = i === 0 ? "#0f0" : "#0a0";
-        ctx.fillRect(snake[i].x, snake[i].y, box, box);
-      }
+        ctx.fillRect(part.x, part.y, box, box);
+      });
 
       ctx.fillStyle = "#f00";
       ctx.fillRect(food.x, food.y, box, box);
@@ -171,22 +295,43 @@
 
       const newHead = { x: snakeX, y: snakeY };
 
-      if (
-        snakeX < 0 ||
-        snakeY < 0 ||
-        snakeX >= 400 ||
-        snakeY >= 400 ||
-        collision(newHead, snake)
-      ) {
+      if (snakeX < 0 || snakeY < 0 || snakeX >= 400 || snakeY >= 400 || collision(newHead, snake)) {
         clearInterval(game);
-        alert("💀 Game Over! Your score: " + score);
-        canvas.style.display = "none";
-        scoreDisplay.style.display = "none";
-        startScreen.style.display = "block";
+        endGame();
       }
 
       snake.unshift(newHead);
     }
+
+    function endGame() {
+      alert("💀 Game Over! Your score: " + score);
+      const users = loadUsers();
+      if (score > users[currentUser].highScore) {
+        users[currentUser].highScore = score;
+        alert("🎉 New High Score!");
+        saveUsers(users);
+      }
+      updateScoreboard();
+      canvas.style.display = "none";
+      scoreDisplay.style.display = "none";
+      startScreen.style.display = "block";
+      playerInfo.textContent = `👤 Logged in as: ${currentUser} | High Score: ${users[currentUser].highScore}`;
+    }
+
+    // DEBUG PANEL ACTIONS
+    addScoreBtn.addEventListener("click", () => {
+      if (currentUser === "debug") {
+        score += 10;
+        scoreDisplay.textContent = "Score: " + score;
+      }
+    });
+
+    removeScoreBtn.addEventListener("click", () => {
+      if (currentUser === "debug" && score > 0) {
+        score = Math.max(0, score - 10);
+        scoreDisplay.textContent = "Score: " + score;
+      }
+    });
   </script>
 </body>
 </html>
