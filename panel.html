@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel - RobTop</title>
+<style>
+body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #111; color: #0f0; }
+button { padding: 10px 20px; margin: 10px; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>RobTop Admin Panel</h1>
+<p>Welcome, RobTop! You have access to debug and manage the game.</p>
+<button onclick="toggleDebug()">Toggle Debug Mode</button>
+<button onclick="resetScores()">Reset All Scores</button>
+<button onclick="logout()">Logout</button>
+
+<script>
+// Check if current user is RobTop
+const currentUser = localStorage.getItem('currentUser');
+if(currentUser !== 'RobTop'){
+    // Redirect to game page with level selection
+    window.location.href = 'game.html';
+}
+
+function toggleDebug() {
+    alert('Debug mode toggled! (Functionality placeholder)');
+}
+
+function resetScores() {
+    if(confirm('Are you sure you want to reset all user high scores?')){
+        for(let key in localStorage){
+            if(key.startsWith('highscore_')){
+                localStorage.setItem(key, 0);
+            }
+        }
+        alert('All scores reset!');
+    }
+}
+
+function logout() {
+    localStorage.removeItem('currentUser');
+    window.location.href = 'login.html';
+}
+</script>
+</body>
+</html>
