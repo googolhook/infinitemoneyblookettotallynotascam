@@ -5,15 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Geometry Dash - Game</title>
 <style>
-body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
-canvas { background: #222; display: block; margin: 0 auto; }
+body { margin: 0; font-family: Arial, sans-serif; background: #222; color: white; }
+#menu { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+#menu button { margin: 5px; padding: 10px 20px; cursor: pointer; font-size: 16px; }
+canvas { display: block; margin: 0 auto; background: #222; }
 #scoreboard { position: fixed; top: 10px; right: 10px; color: white; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; }
 #debug { position: fixed; bottom: 10px; right: 10px; color: lime; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; display: none; }
 </style>
 </head>
 <body>
-<canvas id="gameCanvas" width="800" height="400"></canvas>
-<div id="scoreboard">
+<div id="menu">
+    <h1>Geometry Dash</h1>
+    <p>Select a level to start:</p>
+    <div id="levelButtons"></div>
+    <button onclick="logout()">Logout</button>
+</div>
+<canvas id="gameCanvas" width="800" height="400" style="display:none;"></canvas>
+<div id="scoreboard" style="display:none;">
   Score: <span id="score">0</span><br>
   High Score: <span id="highscore">0</span>
 </div>
@@ -21,34 +29,65 @@ canvas { background: #222; display: block; margin: 0 auto; }
   Debug Mode Active<br>
   User: <span id="debugUser"></span>
 </div>
+
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-
 const currentUser = localStorage.getItem('currentUser');
+if(!currentUser) {
+    window.location.href = 'login.html';
+}
+
+const debugMode = currentUser === 'RobTop';
 document.getElementById('debugUser').innerText = currentUser;
-
-// Game Variables
-let player = {x:50, y:300, width:30, height:30, dy:0, onGround:true};
-let gravity = 1;
-let obstacles = [];
-let score = 0;
-let highscore = parseInt(localStorage.getItem('highscore_' + currentUser) || '0');
-let level = 1;
-let debugMode = currentUser === 'RobTop';
-
-document.getElementById('highscore').innerText = highscore;
 if(debugMode) document.getElementById('debug').style.display = 'block';
 
-// Controls
-document.addEventListener('keydown', e => {
-    if(e.code === 'Space' && player.onGround){
-        player.dy = -15;
-        player.onGround = false;
-    }
-});
+let level = 1;
 
-// Obstacles generation
+// Create level selection buttons
+const levelButtonsContainer = document.getElementById('levelButtons');
+for(let i=1;i<=7;i++){
+    const btn = document.createElement('button');
+    btn.innerText = 'Level ' + i;
+    btn.onclick = () => startGame(i);
+    levelButtonsContainer.appendChild(btn);
+}
+
+// Logout
+function logout(){
+    localStorage.removeItem('currentUser');
+    window.location.href = 'login.html';
+}
+
+// Game Variables
+let canvas, ctx, player, obstacles, score, highscore, gameInterval;
+
+function startGame(selectedLevel){
+    level = selectedLevel;
+    document.getElementById('menu').style.display = 'none';
+    canvas = document.getElementById('gameCanvas');
+    ctx = canvas.getContext('2d');
+    canvas.style.display = 'block';
+    document.getElementById('scoreboard').style.display = 'block';
+
+    player = {x:50, y:300, width:30, height:30, dy:0, onGround:true};
+    obstacles = [];
+    score = 0;
+    highscore = parseInt(localStorage.getItem('highscore_' + currentUser) || '0');
+    document.getElementById('highscore').innerText = highscore;
+
+    document.addEventListener('keydown', e => {
+        if(e.code === 'Space' && player.onGround){
+            player.dy = -15;
+            player.onGround = false;
+        }
+    });
+
+    if(gameInterval) clearInterval(gameInterval);
+    gameInterval = setInterval(spawnObstacle, 2000 / level);
+
+    update();
+}
+
+// Obstacles
 function spawnObstacle() {
     obstacles.push({x: canvas.width, y: 350, width: 30, height: 50});
 }
@@ -58,7 +97,7 @@ function update() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
     // Player physics
-    player.dy += gravity;
+    player.dy += 1;
     player.y += player.dy;
     if(player.y + player.height >= 380){
         player.y = 380 - player.height;
@@ -81,41 +120,30 @@ function update() {
         if(player.x < ob.x + ob.width && player.x + player.width > ob.x &&
            player.y < ob.y + ob.height && player.y + player.height > ob.y){
             gameOver();
+            return;
         }
     }
 
-    // Remove off-screen
     obstacles = obstacles.filter(ob => ob.x + ob.width > 0);
 
     // Score
     score++;
     document.getElementById('score').innerText = score;
 
-    // Increase level every 2000 points
-    if(score > level * 2000 && level < 7){
-        level++;
-    }
-
     requestAnimationFrame(update);
 }
 
-// Spawn obstacles randomly
-setInterval(spawnObstacle, 2000 / level);
-
 // Game over
-function gameOver() {
+function gameOver(){
     if(score > highscore){
         highscore = score;
         localStorage.setItem('highscore_' + currentUser, highscore);
     }
     alert('Game Over! Score: ' + score);
-    score = 0;
-    obstacles = [];
-    level = 1;
+    document.getElementById('menu').style.display = 'flex';
+    canvas.style.display = 'none';
+    document.getElementById('scoreboard').style.display = 'none';
 }
-
-// Start game
-update();
 </script>
 </body>
 </html>
