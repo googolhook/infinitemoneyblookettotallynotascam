@@ -2,14 +2,139 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Geometry Dash</title>
-<script>
-  // Redirect to signup page
-  window.location.href = "signup.html";
-</script>
+<title>Snake Shooter</title>
+<style>
+  canvas {
+    background: #000;
+    display: block;
+    margin: 0 auto;
+    border: 2px solid #fff;
+  }
+  body { text-align: center; color: white; font-family: sans-serif; }
+</style>
 </head>
 <body>
-<p>If you are not redirected automatically, <a href="signup.html">click here to sign up</a>.</p>
+<h1>Snake Shooter</h1>
+<p>Arrow keys to move, SPACE to shoot</p>
+<canvas id="game" width="600" height="400"></canvas>
+<p>Score: <span id="score">0</span></p>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+const grid = 20;
+let snake = [{x: 10 * grid, y: 10 * grid}];
+let dx = grid;
+let dy = 0;
+
+let bullets = [];
+let enemies = [];
+let score = 0;
+document.getElementById('score').innerText = score;
+
+// Generate random enemies
+function spawnEnemy() {
+    let ex = Math.floor(Math.random() * (canvas.width / grid)) * grid;
+    let ey = Math.floor(Math.random() * (canvas.height / grid)) * grid;
+    enemies.push({x: ex, y: ey, dx: Math.random() < 0.5 ? 1 : -1, dy: Math.random() < 0.5 ? 1 : -1});
+}
+
+// Draw snake
+function drawSnake() {
+    ctx.fillStyle = 'lime';
+    snake.forEach(part => ctx.fillRect(part.x, part.y, grid, grid));
+}
+
+// Move snake
+function moveSnake() {
+    const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+    snake.unshift(head);
+    snake.pop();
+}
+
+// Draw bullets
+function drawBullets() {
+    ctx.fillStyle = 'red';
+    bullets.forEach(b => ctx.fillRect(b.x, b.y, 5, 5));
+}
+
+// Move bullets
+function moveBullets() {
+    bullets.forEach(b => { b.x += b.dx; b.y += b.dy; });
+    bullets = bullets.filter(b => b.x >= 0 && b.x <= canvas.width && b.y >= 0 && b.y <= canvas.height);
+}
+
+// Draw enemies
+function drawEnemies() {
+    ctx.fillStyle = 'orange';
+    enemies.forEach(e => ctx.fillRect(e.x, e.y, grid, grid));
+}
+
+// Move enemies
+function moveEnemies() {
+    enemies.forEach(e => {
+        e.x += e.dx;
+        e.y += e.dy;
+        if(e.x < 0 || e.x >= canvas.width) e.dx *= -1;
+        if(e.y < 0 || e.y >= canvas.height) e.dy *= -1;
+    });
+}
+
+// Check collisions
+function checkCollisions() {
+    // Bullet hits enemy
+    bullets.forEach((b, bi) => {
+        enemies.forEach((e, ei) => {
+            if(b.x < e.x + grid && b.x + 5 > e.x && b.y < e.y + grid && b.y + 5 > e.y) {
+                bullets.splice(bi,1);
+                enemies.splice(ei,1);
+                score += 10;
+                document.getElementById('score').innerText = score;
+            }
+        });
+    });
+
+    // Snake hits enemy
+    enemies.forEach(e => {
+        if(snake[0].x < e.x + grid && snake[0].x + grid > e.x && snake[0].y < e.y + grid && snake[0].y + grid > e.y) {
+            alert('Game Over! Final Score: ' + score);
+            window.location.reload();
+        }
+    });
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowUp' && dy === 0) { dx = 0; dy = -grid; }
+    if (e.key === 'ArrowDown' && dy === 0) { dx = 0; dy = grid; }
+    if (e.key === 'ArrowLeft' && dx === 0) { dx = -grid; dy = 0; }
+    if (e.key === 'ArrowRight' && dx === 0) { dx = grid; dy = 0; }
+    if (e.key === ' ') { // Shoot bullet
+        bullets.push({
+            x: snake[0].x + grid/2 - 2.5,
+            y: snake[0].y + grid/2 - 2.5,
+            dx: dx ? dx/2 : 0,
+            dy: dy ? dy/2 : 0
+        });
+    }
+});
+
+// Spawn enemies every 2 seconds
+setInterval(spawnEnemy, 2000);
+
+function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    moveSnake();
+    moveBullets();
+    moveEnemies();
+    checkCollisions();
+    drawSnake();
+    drawBullets();
+    drawEnemies();
+    requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
 </body>
 </html>
