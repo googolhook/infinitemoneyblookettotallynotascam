@@ -29,7 +29,7 @@
       display: none;
     }
 
-    #loginScreen, #startScreen, #scoreboard {
+    #loginScreen, #signupScreen, #startScreen, #scoreboard {
       text-align: center;
       color: #0f0;
     }
@@ -95,6 +95,8 @@
       padding: 10px;
       margin-top: 10px;
       color: #f0f;
+      text-align: center;
+      width: 300px;
     }
 
     #debugPanel h3 {
@@ -111,6 +113,40 @@
       background: #f0f;
       color: #111;
     }
+
+    #pointsValue {
+      font-weight: bold;
+      color: #ff0;
+    }
+
+    /* Collapsible toggle */
+    #debugToggle {
+      background: #222;
+      border: 2px solid #f0f;
+      color: #f0f;
+      padding: 8px 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 10px;
+      font-size: 1em;
+    }
+
+    #debugToggle:hover {
+      background: #f0f;
+      color: #111;
+    }
+
+    #debugContent {
+      display: none;
+      margin-top: 10px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
   </style>
 </head>
 <body>
@@ -118,10 +154,21 @@
   <!-- LOGIN SCREEN -->
   <div id="loginScreen">
     <h1>🐍 Snake Game</h1>
-    <h3>Login or Create an Account</h3>
-    <input id="username" type="text" placeholder="Username" /><br />
-    <input id="password" type="password" placeholder="Password" /><br />
-    <button id="loginBtn">Login / Signup</button>
+    <h3>Login</h3>
+    <input id="loginUsername" type="text" placeholder="Username" /><br />
+    <input id="loginPassword" type="password" placeholder="Password" /><br />
+    <button id="loginBtn">Login</button><br />
+    <button id="toSignupBtn">Create Account</button>
+  </div>
+
+  <!-- SIGNUP SCREEN -->
+  <div id="signupScreen" style="display:none;">
+    <h1>🐍 Snake Game</h1>
+    <h3>Create Account</h3>
+    <input id="signupUsername" type="text" placeholder="Username" /><br />
+    <input id="signupPassword" type="password" placeholder="Password" /><br />
+    <button id="signupBtn">Sign Up</button><br />
+    <button id="backToLoginBtn">Back to Login</button>
   </div>
 
   <!-- START SCREEN -->
@@ -139,9 +186,16 @@
 
     <!-- Debug Panel -->
     <div id="debugPanel">
-      <h3>🧩 Debug Panel</h3>
-      <button id="addScoreBtn">+10 Score</button>
-      <button id="removeScoreBtn">-10 Score</button>
+      <button id="debugToggle">🧩 Debug Panel ▼</button>
+      <div id="debugContent">
+        <h3>Admin Controls</h3>
+        <label for="userSelect">Select User:</label><br />
+        <select id="userSelect"></select><br />
+        <label for="pointsRange">Points: <span id="pointsValue">10</span></label><br />
+        <input id="pointsRange" type="range" min="1" max="100" value="10"><br />
+        <button id="givePointsBtn">➕ Give Points</button>
+        <button id="removePointsBtn">➖ Remove Points</button>
+      </div>
     </div>
 
     <div id="scoreboard">
@@ -164,23 +218,31 @@
     const startBtn = document.getElementById("startBtn");
     const difficultySelect = document.getElementById("difficulty");
     const loginScreen = document.getElementById("loginScreen");
+    const signupScreen = document.getElementById("signupScreen");
     const loginBtn = document.getElementById("loginBtn");
+    const signupBtn = document.getElementById("signupBtn");
+    const toSignupBtn = document.getElementById("toSignupBtn");
+    const backToLoginBtn = document.getElementById("backToLoginBtn");
     const playerInfo = document.getElementById("playerInfo");
     const logoutBtn = document.getElementById("logoutBtn");
     const scoreTable = document.getElementById("scoreTable");
     const debugPanel = document.getElementById("debugPanel");
-    const addScoreBtn = document.getElementById("addScoreBtn");
-    const removeScoreBtn = document.getElementById("removeScoreBtn");
+    const userSelect = document.getElementById("userSelect");
+    const pointsRange = document.getElementById("pointsRange");
+    const pointsValue = document.getElementById("pointsValue");
+    const givePointsBtn = document.getElementById("givePointsBtn");
+    const removePointsBtn = document.getElementById("removePointsBtn");
+    const debugToggle = document.getElementById("debugToggle");
+    const debugContent = document.getElementById("debugContent");
 
     let score = 0;
     let snake, food, d, game, speed;
     let currentUser = null;
 
-    // Load users from localStorage
+    // Load users
     function loadUsers() {
       return JSON.parse(localStorage.getItem("snakeUsers")) || {};
     }
-
     function saveUsers(users) {
       localStorage.setItem("snakeUsers", JSON.stringify(users));
     }
@@ -194,36 +256,68 @@
       });
     }
 
+    function updateUserDropdown() {
+      const users = loadUsers();
+      userSelect.innerHTML = "";
+      for (const user in users) {
+        const opt = document.createElement("option");
+        opt.value = user;
+        opt.textContent = user;
+        userSelect.appendChild(opt);
+      }
+    }
+
+    // Navigation
+    toSignupBtn.addEventListener("click", ()=>{
+      loginScreen.style.display = "none";
+      signupScreen.style.display = "block";
+    });
+    backToLoginBtn.addEventListener("click", ()=>{
+      signupScreen.style.display = "none";
+      loginScreen.style.display = "block";
+    });
+
+    // Login
     loginBtn.addEventListener("click", ()=>{
-      const username = document.getElementById("username").value.trim();
-      const password = document.getElementById("password").value.trim();
+      const username = document.getElementById("loginUsername").value.trim();
+      const password = document.getElementById("loginPassword").value.trim();
       if(!username || !password) return alert("Enter username and password!");
 
       let users = loadUsers();
-      if(users[username]) {
-        if(users[username].password !== password) {
-          alert("Incorrect password!");
-          return;
-        }
-      } else {
-        users[username] = { password, highScore: 0 };
-        saveUsers(users);
-      }
+      if(!users[username]) return alert("User does not exist! Please sign up first.");
+      if(users[username].password !== password) return alert("Incorrect password!");
 
       currentUser = username;
       loginScreen.style.display = "none";
       startScreen.style.display = "block";
       playerInfo.textContent = `👤 Logged in as: ${username} | High Score: ${users[username].highScore}`;
       updateScoreboard();
-
-      // Show debug panel only if user is "debug"
+      updateUserDropdown();
       debugPanel.style.display = (username === "debug") ? "block" : "none";
+    });
+
+    // Signup
+    signupBtn.addEventListener("click", ()=>{
+      const username = document.getElementById("signupUsername").value.trim();
+      const password = document.getElementById("signupPassword").value.trim();
+      if(!username || !password) return alert("Enter username and password!");
+
+      let users = loadUsers();
+      if(users[username]) return alert("Username already exists!");
+      users[username] = { password, highScore: 0 };
+      saveUsers(users);
+
+      alert("✅ Account created! You can now log in.");
+      signupScreen.style.display = "none";
+      loginScreen.style.display = "block";
     });
 
     logoutBtn.addEventListener("click", ()=>{
       currentUser = null;
       startScreen.style.display = "none";
       loginScreen.style.display = "block";
+      debugContent.style.display = "none";
+      debugToggle.innerText = "🧩 Debug Panel ▼";
     });
 
     startBtn.addEventListener("click", startGame);
@@ -318,19 +412,41 @@
       playerInfo.textContent = `👤 Logged in as: ${currentUser} | High Score: ${users[currentUser].highScore}`;
     }
 
-    // DEBUG PANEL ACTIONS
-    addScoreBtn.addEventListener("click", () => {
-      if (currentUser === "debug") {
-        score += 10;
-        scoreDisplay.textContent = "Score: " + score;
+    // Debug panel actions
+    pointsRange.addEventListener("input", ()=> {
+      pointsValue.textContent = pointsRange.value;
+    });
+
+    debugToggle.addEventListener("click", ()=>{
+      if (debugContent.style.display === "none" || debugContent.style.display === "") {
+        debugContent.style.display = "block";
+        debugToggle.innerText = "🧩 Debug Panel ▲";
+      } else {
+        debugContent.style.display = "none";
+        debugToggle.innerText = "🧩 Debug Panel ▼";
       }
     });
 
-    removeScoreBtn.addEventListener("click", () => {
-      if (currentUser === "debug" && score > 0) {
-        score = Math.max(0, score - 10);
-        scoreDisplay.textContent = "Score: " + score;
-      }
+    givePointsBtn.addEventListener("click", ()=>{
+      if (currentUser !== "debug") return;
+      const users = loadUsers();
+      const selected = userSelect.value;
+      const points = parseInt(pointsRange.value);
+      users[selected].highScore += points;
+      saveUsers(users);
+      updateScoreboard();
+      alert(`✅ Gave ${points} points to ${selected}`);
+    });
+
+    removePointsBtn.addEventListener("click", ()=>{
+      if (currentUser !== "debug") return;
+      const users = loadUsers();
+      const selected = userSelect.value;
+      const points = parseInt(pointsRange.value);
+      users[selected].highScore = Math.max(0, users[selected].highScore - points);
+      saveUsers(users);
+      updateScoreboard();
+      alert(`⚠️ Removed ${points} points from ${selected}`);
     });
   </script>
 </body>
