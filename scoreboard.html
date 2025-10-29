@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Geometry Dash - Global Scoreboard</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
+h1 { margin-bottom: 20px; }
+table {
+    border-collapse: collapse;
+    width: 80%;
+    max-width: 600px;
+}
+th, td {
+    border: 1px solid #fff;
+    padding: 10px;
+    text-align: center;
+}
+th { background: #333; }
+tr:nth-child(even) { background: #222; }
+button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    cursor: pointer;
+}
+</style>
+</head>
+<body>
+<h1>Global Scoreboard</h1>
+<table>
+    <thead>
+        <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>High Score</th>
+        </tr>
+    </thead>
+    <tbody id="scoreboardBody">
+    </tbody>
+</table>
+<button onclick="goBack()">Back</button>
+
+<script>
+function loadScores(){
+    const scores = [];
+
+    // Gather all high scores from localStorage
+    for(let key in localStorage){
+        if(key.startsWith('highscore_')){
+            const username = key.replace('highscore_', '');
+            const score = parseInt(localStorage.getItem(key)) || 0;
+            scores.push({username, score});
+        }
+    }
+
+    // Sort descending
+    scores.sort((a,b) => b.score - a.score);
+
+    // Display top scores
+    const tbody = document.getElementById('scoreboardBody');
+    tbody.innerHTML = '';
+    scores.forEach((entry, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${index+1}</td><td>${entry.username}</td><td>${entry.score}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+function goBack(){
+    const currentUser = localStorage.getItem('currentUser');
+    if(currentUser){
+        window.location.href = 'game.html';
+    } else {
+        window.location.href = 'login.html';
+    }
+}
+
+loadScores();
+</script>
+</body>
+</html>
