@@ -1,453 +1,302 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Snake Game</title>
-  <style>
-    body {
-      background: #111;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      color: #0f0;
-      flex-direction: column;
-    }
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const box = 20;
+const scoreDisplay = document.getElementById("score");
+const startScreen = document.getElementById("startScreen");
+const startBtn = document.getElementById("startBtn");
+const difficultySelect = document.getElementById("difficulty");
+const loginScreen = document.getElementById("loginScreen");
+const signupScreen = document.getElementById("signupScreen");
+const loginBtn = document.getElementById("loginBtn");
+const signupBtn = document.getElementById("signupBtn");
+const toSignupBtn = document.getElementById("toSignupBtn");
+const backToLoginBtn = document.getElementById("backToLoginBtn");
+const playerInfo = document.getElementById("playerInfo");
+const logoutBtn = document.getElementById("logoutBtn");
+const scoreTable = document.getElementById("scoreTable");
+const debugPanel = document.getElementById("debugPanel");
+const userSelect = document.getElementById("userSelect");
+const pointsRange = document.getElementById("pointsRange");
+const pointsValue = document.getElementById("pointsValue");
+const givePointsBtn = document.getElementById("givePointsBtn");
+const removePointsBtn = document.getElementById("removePointsBtn");
+const debugToggle = document.getElementById("debugToggle");
+const debugContent = document.getElementById("debugContent");
 
-    canvas {
-      background: #222;
-      border: 2px solid #0f0;
-      display: none;
-    }
+let score = 0;
+let snake, food, d, game, speed;
+let currentUser = null;
 
-    #score, #playerInfo {
-      font-size: 1.3em;
-      margin-bottom: 10px;
-      display: none;
-    }
+// Load users globally
+function loadUsers() {
+  return JSON.parse(localStorage.getItem("snakeUsers")) || {};
+}
+function saveUsers(users) {
+  localStorage.setItem("snakeUsers", JSON.stringify(users));
+}
 
-    #loginScreen, #signupScreen, #startScreen, #scoreboard {
-      text-align: center;
-      color: #0f0;
-    }
+// Keep logged-in user
+function saveCurrentUser(user) {
+  localStorage.setItem("snakeCurrentUser", user);
+}
+function loadCurrentUser() {
+  return localStorage.getItem("snakeCurrentUser");
+}
 
-    h1 {
-      font-size: 3em;
-      margin-bottom: 20px;
-      text-shadow: 0 0 10px #0f0;
-    }
+// Update scoreboard globally
+function updateScoreboard() {
+  const users = loadUsers();
+  const sorted = Object.entries(users).sort((a,b)=>b[1].highScore - a[1].highScore);
+  scoreTable.innerHTML = "<tr><th>Player</th><th>High Score</th></tr>";
+  sorted.forEach(([name, data])=>{
+    scoreTable.innerHTML += `<tr><td>${name}</td><td>${data.highScore}</td></tr>`;
+  });
+}
 
-    button {
-      padding: 10px 25px;
-      font-size: 1.1em;
-      border: 2px solid #0f0;
-      background: transparent;
-      color: #0f0;
-      cursor: pointer;
-      transition: all 0.3s;
-      margin: 5px;
-    }
+// Populate debug user dropdown
+function updateUserDropdown() {
+  const users = loadUsers();
+  userSelect.innerHTML = "";
+  for (const user in users) {
+    const opt = document.createElement("option");
+    opt.value = user;
+    opt.textContent = user;
+    userSelect.appendChild(opt);
+  }
+}
 
-    button:hover {
-      background: #0f0;
-      color: #111;
-    }
+// Navigation
+toSignupBtn.addEventListener("click", ()=>{
+  loginScreen.style.display = "none";
+  signupScreen.style.display = "block";
+});
+backToLoginBtn.addEventListener("click", ()=>{
+  signupScreen.style.display = "none";
+  loginScreen.style.display = "block";
+});
 
-    input, select {
-      background: #111;
-      border: 2px solid #0f0;
-      color: #0f0;
-      font-size: 1.1em;
-      padding: 5px 10px;
-      border-radius: 5px;
-      margin-top: 10px;
-      cursor: pointer;
-    }
+// Login
+loginBtn.addEventListener("click", ()=>{
+  const username = document.getElementById("loginUsername").value.trim();
+  const password = document.getElementById("loginPassword").value.trim();
+  if(!username || !password) return alert("Enter username and password!");
 
-    input:focus, select:focus {
-      outline: none;
-      box-shadow: 0 0 10px #0f0;
-    }
+  let users = loadUsers();
+  if(!users[username]) return alert("User does not exist! Please sign up first.");
+  if(users[username].password !== password) return alert("Incorrect password!");
 
-    table {
-      margin: 10px auto;
-      border-collapse: collapse;
-      color: #0f0;
-      width: 80%;
-    }
+  currentUser = username;
+  saveCurrentUser(username);
+  loginScreen.style.display = "none";
+  startScreen.style.display = "block";
+  playerInfo.textContent = `👤 Logged in as: ${username} | High Score: ${users[username].highScore}`;
+  updateScoreboard();
+  updateUserDropdown();
+  debugPanel.style.display = (username === "debug") ? "block" : "none";
+});
 
-    th, td {
-      border: 1px solid #0f0;
-      padding: 5px 10px;
-    }
+// Signup
+signupBtn.addEventListener("click", ()=>{
+  const username = document.getElementById("signupUsername").value.trim();
+  const password = document.getElementById("signupPassword").value.trim();
+  if(!username || !password) return alert("Enter username and password!");
 
-    th {
-      background: #0a0;
-    }
+  let users = loadUsers();
+  if(users[username]) return alert("Username already exists!");
+  users[username] = { password, highScore: 0, email: "" };
+  saveUsers(users);
 
-    /* Debug panel styling */
-    #debugPanel {
-      display: none;
-      border: 2px dashed #f0f;
-      padding: 10px;
-      margin-top: 10px;
-      color: #f0f;
-      text-align: center;
-      width: 300px;
-    }
+  alert("✅ Account created! You can now log in.");
+  signupScreen.style.display = "none";
+  loginScreen.style.display = "block";
+});
 
-    #debugPanel h3 {
-      color: #f0f;
-      margin-top: 0;
-    }
+// Logout
+logoutBtn.addEventListener("click", ()=>{
+  currentUser = null;
+  localStorage.removeItem("snakeCurrentUser");
+  startScreen.style.display = "none";
+  loginScreen.style.display = "block";
+  debugContent.style.display = "none";
+  debugToggle.innerText = "🧩 Debug Panel ▼";
+});
 
-    #debugPanel button {
-      border-color: #f0f;
-      color: #f0f;
-    }
+// Auto-login if user saved
+window.addEventListener("load", () => {
+  const user = loadCurrentUser();
+  if(user && loadUsers()[user]) {
+    currentUser = user;
+    loginScreen.style.display = "none";
+    startScreen.style.display = "block";
+    const users = loadUsers();
+    playerInfo.textContent = `👤 Logged in as: ${user} | High Score: ${users[user].highScore}`;
+    updateScoreboard();
+    updateUserDropdown();
+    debugPanel.style.display = (user === "debug") ? "block" : "none";
+  }
+});
 
-    #debugPanel button:hover {
-      background: #f0f;
-      color: #111;
-    }
+// Password reset via email simulation
+function sendPasswordReset(email) {
+  alert(`📧 Password reset link sent to ${email} (simulation)`);
+}
 
-    #pointsValue {
-      font-weight: bold;
-      color: #ff0;
-    }
+document.getElementById("loginScreen").insertAdjacentHTML("beforeend",
+  `<br><button id="resetPasswordBtn">Forgot Password?</button>`
+);
 
-    /* Collapsible toggle */
-    #debugToggle {
-      background: #222;
-      border: 2px solid #f0f;
-      color: #f0f;
-      padding: 8px 20px;
-      cursor: pointer;
-      transition: all 0.3s;
-      margin-top: 10px;
-      font-size: 1em;
-    }
+document.getElementById("resetPasswordBtn").addEventListener("click", ()=>{
+  const username = prompt("Enter your username for password reset:");
+  if(!username) return;
+  const users = loadUsers();
+  if(!users[username] || !users[username].email) return alert("User/email not found.");
+  sendPasswordReset(users[username].email);
+});
 
-    #debugToggle:hover {
-      background: #f0f;
-      color: #111;
-    }
+// Debug panel: give/remove points
+pointsRange.addEventListener("input", ()=> {
+  pointsValue.textContent = pointsRange.value;
+});
 
-    #debugContent {
-      display: none;
-      margin-top: 10px;
-      animation: fadeIn 0.3s ease;
-    }
+debugToggle.addEventListener("click", ()=>{
+  if (debugContent.style.display === "none" || debugContent.style.display === "") {
+    debugContent.style.display = "block";
+    debugToggle.innerText = "🧩 Debug Panel ▲";
+  } else {
+    debugContent.style.display = "none";
+    debugToggle.innerText = "🧩 Debug Panel ▼";
+  }
+});
 
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
+givePointsBtn.addEventListener("click", ()=>{
+  if (currentUser !== "debug") return;
+  const users = loadUsers();
+  const selected = userSelect.value;
+  const points = parseInt(pointsRange.value);
+  users[selected].highScore += points;
+  saveUsers(users);
+  updateScoreboard();
+  alert(`✅ Gave ${points} points to ${selected}`);
+});
 
-  </style>
-</head>
-<body>
+removePointsBtn.addEventListener("click", ()=>{
+  if (currentUser !== "debug") return;
+  const users = loadUsers();
+  const selected = userSelect.value;
+  const points = parseInt(pointsRange.value);
+  users[selected].highScore = Math.max(0, users[selected].highScore - points);
+  saveUsers(users);
+  updateScoreboard();
+  alert(`⚠️ Removed ${points} points from ${selected}`);
+});
 
-  <!-- LOGIN SCREEN -->
-  <div id="loginScreen">
-    <h1>🐍 Snake Game</h1>
-    <h3>Login</h3>
-    <input id="loginUsername" type="text" placeholder="Username" /><br />
-    <input id="loginPassword" type="password" placeholder="Password" /><br />
-    <button id="loginBtn">Login</button><br />
-    <button id="toSignupBtn">Create Account</button>
-  </div>
+// Debug: change password
+debugContent.insertAdjacentHTML("beforeend",
+  `<br><button id="changePasswordBtn">Change Password</button>`
+);
 
-  <!-- SIGNUP SCREEN -->
-  <div id="signupScreen" style="display:none;">
-    <h1>🐍 Snake Game</h1>
-    <h3>Create Account</h3>
-    <input id="signupUsername" type="text" placeholder="Username" /><br />
-    <input id="signupPassword" type="password" placeholder="Password" /><br />
-    <button id="signupBtn">Sign Up</button><br />
-    <button id="backToLoginBtn">Back to Login</button>
-  </div>
+document.getElementById("changePasswordBtn").addEventListener("click", ()=>{
+  if(currentUser !== "debug") return;
+  const users = loadUsers();
+  const selected = userSelect.value;
+  const newPass = prompt(`Enter new password for ${selected}:`);
+  if(!newPass) return;
+  users[selected].password = newPass;
+  saveUsers(users);
+  alert(`🔑 Password for ${selected} updated.`);
+});
 
-  <!-- START SCREEN -->
-  <div id="startScreen" style="display:none;">
-    <h1>🐍 Snake Game</h1>
-    <div id="playerInfo"></div>
-    <label for="difficulty">Select Difficulty:</label><br />
-    <select id="difficulty">
-      <option value="200">Easy 🐢</option>
-      <option value="120" selected>Medium 🐍</option>
-      <option value="70">Hard ⚡</option>
-    </select><br />
-    <button id="startBtn">Start Game</button>
-    <button id="logoutBtn">Logout</button>
+// --- Snake game functions ---
+startBtn.addEventListener("click", startGame);
 
-    <!-- Debug Panel -->
-    <div id="debugPanel">
-      <button id="debugToggle">🧩 Debug Panel ▼</button>
-      <div id="debugContent">
-        <h3>Admin Controls</h3>
-        <label for="userSelect">Select User:</label><br />
-        <select id="userSelect"></select><br />
-        <label for="pointsRange">Points: <span id="pointsValue">10</span></label><br />
-        <input id="pointsRange" type="range" min="1" max="100" value="10"><br />
-        <button id="givePointsBtn">➕ Give Points</button>
-        <button id="removePointsBtn">➖ Remove Points</button>
-      </div>
-    </div>
+function startGame() {
+  if(!currentUser) return alert("Please login first!");
+  speed = parseInt(difficultySelect.value);
+  startScreen.style.display = "none";
+  canvas.style.display = "block";
+  scoreDisplay.style.display = "block";
+  resetGame();
+  game = setInterval(draw, speed);
+}
 
-    <div id="scoreboard">
-      <h3>🏆 Scoreboard</h3>
-      <table id="scoreTable">
-        <tr><th>Player</th><th>High Score</th></tr>
-      </table>
-    </div>
-  </div>
+function resetGame() {
+  score = 0;
+  scoreDisplay.textContent = "Score: 0";
+  snake = [{ x: 9 * box, y: 10 * box }];
+  food = {
+    x: Math.floor(Math.random() * 19 + 1) * box,
+    y: Math.floor(Math.random() * 19 + 1) * box,
+  };
+  d = null;
+}
 
-  <div id="score">Score: 0</div>
-  <canvas id="game" width="400" height="400"></canvas>
+document.addEventListener("keydown", direction);
 
-  <script>
-    const canvas = document.getElementById("game");
-    const ctx = canvas.getContext("2d");
-    const box = 20;
-    const scoreDisplay = document.getElementById("score");
-    const startScreen = document.getElementById("startScreen");
-    const startBtn = document.getElementById("startBtn");
-    const difficultySelect = document.getElementById("difficulty");
-    const loginScreen = document.getElementById("loginScreen");
-    const signupScreen = document.getElementById("signupScreen");
-    const loginBtn = document.getElementById("loginBtn");
-    const signupBtn = document.getElementById("signupBtn");
-    const toSignupBtn = document.getElementById("toSignupBtn");
-    const backToLoginBtn = document.getElementById("backToLoginBtn");
-    const playerInfo = document.getElementById("playerInfo");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const scoreTable = document.getElementById("scoreTable");
-    const debugPanel = document.getElementById("debugPanel");
-    const userSelect = document.getElementById("userSelect");
-    const pointsRange = document.getElementById("pointsRange");
-    const pointsValue = document.getElementById("pointsValue");
-    const givePointsBtn = document.getElementById("givePointsBtn");
-    const removePointsBtn = document.getElementById("removePointsBtn");
-    const debugToggle = document.getElementById("debugToggle");
-    const debugContent = document.getElementById("debugContent");
+function direction(event) {
+  if (event.key === "ArrowLeft" && d !== "RIGHT") d = "LEFT";
+  else if (event.key === "ArrowUp" && d !== "DOWN") d = "UP";
+  else if (event.key === "ArrowRight" && d !== "LEFT") d = "RIGHT";
+  else if (event.key === "ArrowDown" && d !== "UP") d = "DOWN";
+}
 
-    let score = 0;
-    let snake, food, d, game, speed;
-    let currentUser = null;
+function collision(head, array) {
+  return array.some(part => head.x === part.x && head.y === part.y);
+}
 
-    // Load users
-    function loadUsers() {
-      return JSON.parse(localStorage.getItem("snakeUsers")) || {};
-    }
-    function saveUsers(users) {
-      localStorage.setItem("snakeUsers", JSON.stringify(users));
-    }
+function draw() {
+  ctx.fillStyle = "#111";
+  ctx.fillRect(0, 0, 400, 400);
 
-    function updateScoreboard() {
-      const users = loadUsers();
-      const sorted = Object.entries(users).sort((a,b)=>b[1].highScore - a[1].highScore);
-      scoreTable.innerHTML = "<tr><th>Player</th><th>High Score</th></tr>";
-      sorted.forEach(([name, data])=>{
-        scoreTable.innerHTML += `<tr><td>${name}</td><td>${data.highScore}</td></tr>`;
-      });
-    }
+  snake.forEach((part, i) => {
+    ctx.fillStyle = i === 0 ? "#0f0" : "#0a0";
+    ctx.fillRect(part.x, part.y, box, box);
+  });
 
-    function updateUserDropdown() {
-      const users = loadUsers();
-      userSelect.innerHTML = "";
-      for (const user in users) {
-        const opt = document.createElement("option");
-        opt.value = user;
-        opt.textContent = user;
-        userSelect.appendChild(opt);
-      }
-    }
+  ctx.fillStyle = "#f00";
+  ctx.fillRect(food.x, food.y, box, box);
 
-    // Navigation
-    toSignupBtn.addEventListener("click", ()=>{
-      loginScreen.style.display = "none";
-      signupScreen.style.display = "block";
-    });
-    backToLoginBtn.addEventListener("click", ()=>{
-      signupScreen.style.display = "none";
-      loginScreen.style.display = "block";
-    });
+  let snakeX = snake[0].x;
+  let snakeY = snake[0].y;
 
-    // Login
-    loginBtn.addEventListener("click", ()=>{
-      const username = document.getElementById("loginUsername").value.trim();
-      const password = document.getElementById("loginPassword").value.trim();
-      if(!username || !password) return alert("Enter username and password!");
+  if (d === "LEFT") snakeX -= box;
+  if (d === "UP") snakeY -= box;
+  if (d === "RIGHT") snakeX += box;
+  if (d === "DOWN") snakeY += box;
 
-      let users = loadUsers();
-      if(!users[username]) return alert("User does not exist! Please sign up first.");
-      if(users[username].password !== password) return alert("Incorrect password!");
+  if (snakeX === food.x && snakeY === food.y) {
+    score++;
+    scoreDisplay.textContent = "Score: " + score;
+    food = {
+      x: Math.floor(Math.random() * 19 + 1) * box,
+      y: Math.floor(Math.random() * 19 + 1) * box,
+    };
+  } else {
+    snake.pop();
+  }
 
-      currentUser = username;
-      loginScreen.style.display = "none";
-      startScreen.style.display = "block";
-      playerInfo.textContent = `👤 Logged in as: ${username} | High Score: ${users[username].highScore}`;
-      updateScoreboard();
-      updateUserDropdown();
-      debugPanel.style.display = (username === "debug") ? "block" : "none";
-    });
+  const newHead = { x: snakeX, y: snakeY };
 
-    // Signup
-    signupBtn.addEventListener("click", ()=>{
-      const username = document.getElementById("signupUsername").value.trim();
-      const password = document.getElementById("signupPassword").value.trim();
-      if(!username || !password) return alert("Enter username and password!");
+  if (snakeX < 0 || snakeY < 0 || snakeX >= 400 || snakeY >= 400 || collision(newHead, snake)) {
+    clearInterval(game);
+    endGame();
+  }
 
-      let users = loadUsers();
-      if(users[username]) return alert("Username already exists!");
-      users[username] = { password, highScore: 0 };
-      saveUsers(users);
+  snake.unshift(newHead);
+}
 
-      alert("✅ Account created! You can now log in.");
-      signupScreen.style.display = "none";
-      loginScreen.style.display = "block";
-    });
-
-    logoutBtn.addEventListener("click", ()=>{
-      currentUser = null;
-      startScreen.style.display = "none";
-      loginScreen.style.display = "block";
-      debugContent.style.display = "none";
-      debugToggle.innerText = "🧩 Debug Panel ▼";
-    });
-
-    startBtn.addEventListener("click", startGame);
-
-    function startGame() {
-      if(!currentUser) return alert("Please login first!");
-      speed = parseInt(difficultySelect.value);
-      startScreen.style.display = "none";
-      canvas.style.display = "block";
-      scoreDisplay.style.display = "block";
-      resetGame();
-      game = setInterval(draw, speed);
-    }
-
-    function resetGame() {
-      score = 0;
-      scoreDisplay.textContent = "Score: 0";
-      snake = [{ x: 9 * box, y: 10 * box }];
-      food = {
-        x: Math.floor(Math.random() * 19 + 1) * box,
-        y: Math.floor(Math.random() * 19 + 1) * box,
-      };
-      d = null;
-    }
-
-    document.addEventListener("keydown", direction);
-
-    function direction(event) {
-      if (event.key === "ArrowLeft" && d !== "RIGHT") d = "LEFT";
-      else if (event.key === "ArrowUp" && d !== "DOWN") d = "UP";
-      else if (event.key === "ArrowRight" && d !== "LEFT") d = "RIGHT";
-      else if (event.key === "ArrowDown" && d !== "UP") d = "DOWN";
-    }
-
-    function collision(head, array) {
-      return array.some(part => head.x === part.x && head.y === part.y);
-    }
-
-    function draw() {
-      ctx.fillStyle = "#111";
-      ctx.fillRect(0, 0, 400, 400);
-
-      snake.forEach((part, i) => {
-        ctx.fillStyle = i === 0 ? "#0f0" : "#0a0";
-        ctx.fillRect(part.x, part.y, box, box);
-      });
-
-      ctx.fillStyle = "#f00";
-      ctx.fillRect(food.x, food.y, box, box);
-
-      let snakeX = snake[0].x;
-      let snakeY = snake[0].y;
-
-      if (d === "LEFT") snakeX -= box;
-      if (d === "UP") snakeY -= box;
-      if (d === "RIGHT") snakeX += box;
-      if (d === "DOWN") snakeY += box;
-
-      if (snakeX === food.x && snakeY === food.y) {
-        score++;
-        scoreDisplay.textContent = "Score: " + score;
-        food = {
-          x: Math.floor(Math.random() * 19 + 1) * box,
-          y: Math.floor(Math.random() * 19 + 1) * box,
-        };
-      } else {
-        snake.pop();
-      }
-
-      const newHead = { x: snakeX, y: snakeY };
-
-      if (snakeX < 0 || snakeY < 0 || snakeX >= 400 || snakeY >= 400 || collision(newHead, snake)) {
-        clearInterval(game);
-        endGame();
-      }
-
-      snake.unshift(newHead);
-    }
-
-    function endGame() {
-      alert("💀 Game Over! Your score: " + score);
-      const users = loadUsers();
-      if (score > users[currentUser].highScore) {
-        users[currentUser].highScore = score;
-        alert("🎉 New High Score!");
-        saveUsers(users);
-      }
-      updateScoreboard();
-      canvas.style.display = "none";
-      scoreDisplay.style.display = "none";
-      startScreen.style.display = "block";
-      playerInfo.textContent = `👤 Logged in as: ${currentUser} | High Score: ${users[currentUser].highScore}`;
-    }
-
-    // Debug panel actions
-    pointsRange.addEventListener("input", ()=> {
-      pointsValue.textContent = pointsRange.value;
-    });
-
-    debugToggle.addEventListener("click", ()=>{
-      if (debugContent.style.display === "none" || debugContent.style.display === "") {
-        debugContent.style.display = "block";
-        debugToggle.innerText = "🧩 Debug Panel ▲";
-      } else {
-        debugContent.style.display = "none";
-        debugToggle.innerText = "🧩 Debug Panel ▼";
-      }
-    });
-
-    givePointsBtn.addEventListener("click", ()=>{
-      if (currentUser !== "debug") return;
-      const users = loadUsers();
-      const selected = userSelect.value;
-      const points = parseInt(pointsRange.value);
-      users[selected].highScore += points;
-      saveUsers(users);
-      updateScoreboard();
-      alert(`✅ Gave ${points} points to ${selected}`);
-    });
-
-    removePointsBtn.addEventListener("click", ()=>{
-      if (currentUser !== "debug") return;
-      const users = loadUsers();
-      const selected = userSelect.value;
-      const points = parseInt(pointsRange.value);
-      users[selected].highScore = Math.max(0, users[selected].highScore - points);
-      saveUsers(users);
-      updateScoreboard();
-      alert(`⚠️ Removed ${points} points from ${selected}`);
-    });
-  </script>
-</body>
-</html>
+function endGame() {
+  alert("💀 Game Over! Your score: " + score);
+  const users = loadUsers();
+  if (score > users[currentUser].highScore) {
+    users[currentUser].highScore = score;
+    alert("🎉 New High Score!");
+    saveUsers(users);
+  }
+  updateScoreboard();
+  canvas.style.display = "none";
+  scoreDisplay.style.display = "none";
+  startScreen.style.display = "block";
+  playerInfo.textContent = `👤 Logged in as: ${currentUser} | High Score: ${users[currentUser].highScore}`;
+}
+</script>
